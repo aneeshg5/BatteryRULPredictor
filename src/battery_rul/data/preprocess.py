@@ -90,9 +90,7 @@ def compute_soh(voltage: pd.Series, threshold: float = SOH_THRESHOLD) -> pd.Seri
 def add_engineered_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add rolling voltage statistics and the voltage derivative."""
     df = df.copy()
-    df["voltage_rolling_mean_10"] = (
-        df["voltage"].rolling(ROLLING_WINDOW, min_periods=1).mean()
-    )
+    df["voltage_rolling_mean_10"] = df["voltage"].rolling(ROLLING_WINDOW, min_periods=1).mean()
     df["voltage_rolling_std_10"] = (
         df["voltage"].rolling(ROLLING_WINDOW, min_periods=1).std().fillna(0.0)
     )
