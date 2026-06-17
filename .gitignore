@@ -13,8 +13,8 @@ venv/
 .ruff_cache/
 .pytest_cache/
 
-data/
-mlruns/
+/data/
+/mlruns/
 
 .DS_Store
 .claude/
