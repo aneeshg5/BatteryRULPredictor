@@ -40,3 +40,15 @@ UPGRADED_DNN_RMSE = 0.0126  # Approach 2 avg, from CHECKPOINTS.md Phase 4
 SAMPLE_INTERVAL_SECONDS = 10.0
 RUL_REPLACE_SOH = 0.85
 RUL_HEALTHY_SOH = 0.90
+
+# Phase 7: lightweight self-attention over the voltage history window (Section 5 upgrade).
+ATTENTION_D_MODEL = 32
+ATTENTION_NHEAD = 4
+ATTENTION_NUM_LAYERS = 2
+ATTENTION_DIM_FEEDFORWARD = 64
+ATTENTION_DROPOUT = 0.1
+
+# Phase 7: gradient-boosted tree baseline on the existing engineered tabular features.
+LIGHTGBM_N_ESTIMATORS = 200
+LIGHTGBM_LEARNING_RATE = 0.05
+LIGHTGBM_NUM_LEAVES = 31

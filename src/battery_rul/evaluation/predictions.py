@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
+from lightgbm import LGBMRegressor
 from torch import nn
 
 from battery_rul.config import WINDOW_SIZE
@@ -44,6 +45,26 @@ def predict_battery(
 
     target_idx = [s + window_size - 1 for s in starts]
     result = df.iloc[target_idx][["absolute_time_raw", "voltage_raw", "soh"]].reset_index(drop=True)
+    result = result.rename(columns={"soh": "soh_actual"})
+    result["soh_predicted"] = soh_predicted
+    return result
+
+
+def predict_battery_lightgbm(
+    model: LGBMRegressor,
+    parquet_path: Path,
+    feature_columns: list[str],
+    stride: int = 1,
+) -> pd.DataFrame:
+    """Predict per-row SOH for a battery with a tree model — no windowing needed.
+
+    Returns columns: absolute_time_raw, voltage_raw, soh_actual, soh_predicted.
+    """
+    df = pd.read_parquet(parquet_path)
+    sampled = df.iloc[::stride]
+    soh_predicted = model.predict(sampled[feature_columns].to_numpy(dtype=np.float32))
+
+    result = sampled[["absolute_time_raw", "voltage_raw", "soh"]].reset_index(drop=True)
     result = result.rename(columns={"soh": "soh_actual"})
     result["soh_predicted"] = soh_predicted
     return result

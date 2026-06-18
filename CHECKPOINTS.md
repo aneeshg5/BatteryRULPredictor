@@ -279,4 +279,81 @@ Phase 6 — FastAPI Inference Endpoint
   simulating an entire window.
 
 ### Next Phase
-Phase 7 — EDA Notebooks
+Phase 7 — Advanced Model Comparison (LightGBM + Attention)
+
+## Phase 7 — Advanced Model Comparison (LightGBM + Attention) — COMPLETE
+
+**Date:** 2026-06-18
+
+### What Was Built
+- `src/battery_rul/models/trees.py` — `BatteryLightGBM`, a thin `fit`/`predict`/`save`/`load`
+  wrapper around `LGBMRegressor` operating directly on per-row tabular features (no
+  windowing — the rolling/derivative features already encode short-term history per row)
+- `src/battery_rul/models/attention.py` — `BatteryAttention`: input projection, learned
+  positional embedding, 2 `nn.TransformerEncoderLayer` blocks, head on the final timestep.
+  Same `(batch, seq_len, features) -> (batch, 1)` contract as `BatteryLSTM`, so it plugs
+  into `Trainer`'s existing `input_mode="sequence"` path unchanged — this fulfills the
+  Section 5 "lightweight self-attention over voltage history window" upgrade that was
+  listed but never implemented in Phases 1-6
+- `src/battery_rul/training/tree_trainer.py` — `fit_lightgbm`, a non-epoch training path
+  for tree models that logs params + per-battery RMSE/MAE/R2 to MLflow via
+  `mlflow.lightgbm.log_model`
+- `scripts/train.py` — added `attention` (reuses the `Trainer`/sequence path) and
+  `lightgbm` (bypasses `Trainer` entirely, calls `fit_lightgbm` on flat parquet rows)
+- `src/battery_rul/evaluation/predictions.py` — added `predict_battery_lightgbm` (flat
+  per-row prediction, no windowing) alongside the existing windowed `predict_battery`
+- `scripts/precompute_predictions.py` — added RUN_CONFIGS entries for both new models;
+  LightGBM loads via `mlflow.lightgbm.load_model` and skips per-epoch history (boosting
+  rounds aren't epochs)
+- `src/battery_rul/dashboard/app.py` — added Attention and LightGBM to the Approach-2
+  model dropdown, comparison table, and label map; LightGBM's training-curve panel shows
+  a placeholder explaining why no per-round history exists
+- `tests/test_models.py` — attention forward-shape tests (full window + shorter window),
+  extended parameter-count sanity check
+- `tests/test_trees.py` — fit/predict shape, fit reduces error on synthetic data,
+  save/load round-trip
+
+### Results / Metrics
+| Model | Approach | RW10 | RW11 | RW12 | Average RMSE |
+|---|---|---|---|---|---|
+| paper_dnn | 2 | 0.12% | 0.14% | 1.71% | **0.66%** |
+| lstm | 2 | 0.31% | 0.41% | 1.76% | **0.83%** |
+| upgraded_dnn | 2 | 0.81% | 0.75% | 2.22% | **1.26%** |
+| lightgbm | 2 | 0.20% | 0.21% | 1.64% | **0.68%** |
+| attention | 2 | 0.26% | 0.27% | 1.87% | **0.80%** |
+
+Neither new model beat `paper_dnn`'s 0.66%. LightGBM came closest (0.68%) — strong
+evidence that the per-row engineered features (rolling mean/std, dv/dt) already capture
+the temporal signal that matters, so a model that ignores sequence order entirely loses
+almost nothing. Attention (0.80%) landed between `lstm` and `paper_dnn`, better than
+`upgraded_dnn` but not better than the simplest model. Combined with the Phase 4 finding
+that `upgraded_dnn` underperformed `paper_dnn`, the pattern across all 5 models is
+consistent: on this dataset, model capacity and architectural sophistication don't buy
+accuracy past what `paper_dnn`'s small 2-layer network already extracts from the 5 raw
+features — the bottleneck is the data/feature relationship itself, not the network.
+
+### Issues Encountered
+- **macOS dual-OpenMP-runtime segfault**: PyTorch's wheel bundles its own `libomp.dylib`;
+  LightGBM's compiled extension links against a separate Homebrew-installed copy at
+  `/opt/homebrew/opt/libomp/lib/libomp.dylib`. Loading both into one process crashes with
+  `Fatal Python error: Segmentation fault` on LightGBM's first native call (`.fit()`).
+  `brew install libomp` was a separate, necessary prerequisite (LightGBM's wheel doesn't
+  bundle the runtime it links against) but didn't fix the dual-runtime conflict on its own.
+  First attempted a `DYLD_LIBRARY_PATH` + process re-exec workaround (`os.execve` after
+  setting the env var, since `DYLD_LIBRARY_PATH` only affects dylib resolution for a fresh
+  process, not one already running) — this worked standalone but broke under pytest:
+  pytest's default fd-level output capturing replaces stdout/stderr with internal temp
+  files *before* `conftest.py` runs, so the re-exec'd process inherited those redirected,
+  soon-to-be-orphaned fds and all of its output vanished (confirmed exit 0, zero bytes,
+  even with explicit shell redirection; running with `-s` to disable capturing fixed it,
+  confirming the capture manager as the cause). Replaced the env-var approach entirely
+  with a one-time, venv-scoped binary patch: `install_name_tool -change @rpath/libomp.dylib
+  <path-to-torch's-libomp.dylib> <path-to-lib_lightgbm.dylib>`, rewriting LightGBM's
+  compiled extension to load PyTorch's copy directly. No environment variables, re-exec,
+  or code in the repo are needed — confirmed working under plain `python -c`, the full
+  `pytest tests/ -v` run (25 passed), and `scripts/train.py --model lightgbm`. This is a
+  local machine fix scoped to this project's `.venv` only (not global Homebrew state) and
+  needs to be reapplied if the venv is recreated from scratch.
+
+### Next Phase
+Phase 8 — EDA Notebooks

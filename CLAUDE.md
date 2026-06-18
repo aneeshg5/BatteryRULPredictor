@@ -414,7 +414,64 @@ Tasks:
 4. Run `git add . && git commit -m "feat: phase 6 — FastAPI inference endpoint"`
 **Done when:** `uvicorn battery_rul.inference.api:app --reload` starts; `/predict` returns valid JSON.
 ---
-### PHASE 7 — EDA Notebooks
+### PHASE 7 — Advanced Model Comparison (LightGBM + Attention)
+**Goal:** Go beyond reimplementing the paper — add two models the paper never considered,
+to show ML engineering judgment (right tool for the data) rather than just deep-learning-
+by-default. Both train under Approach 2 (cross-battery) so they slot directly into the
+existing comparison table.
+
+**Context for this decision:** Phase 4 found `upgraded_dnn` (1.26% avg RMSE) actually
+underperformed the simpler `paper_dnn` (0.66%), with `lstm` (0.83%) in between — a signal
+that the bottleneck wasn't network depth/width but the model's access to temporal
+structure. This phase tests that hypothesis two ways: a model that doesn't need temporal
+structure at all (gradient-boosted trees on the existing engineered tabular features), and
+a model built specifically to learn temporal structure itself (self-attention over the raw
+window) instead of relying on hand-engineered rolling-window features.
+
+Tasks:
+1. Add `lightgbm>=4.0` to `pyproject.toml` dependencies.
+2. Write `src/battery_rul/models/trees.py`:
+   - `BatteryLightGBM`: thin wrapper around `lightgbm.LGBMRegressor` with `fit(X, y)`,
+     `predict(X) -> np.ndarray`, and `save(path)` / `load(path)` (joblib) — not an
+     `nn.Module`, since gradient-boosted trees don't fit the PyTorch training loop
+   - Operates directly on `FEATURE_COLUMNS` rows from the processed parquet (no windowing
+     needed — the rolling/derivative features already encode short-term history per row)
+3. Write `src/battery_rul/models/attention.py`:
+   - `BatteryAttention`: input projection (`Linear(input_dim, d_model)`) → positional
+     encoding → 1-2 `nn.TransformerEncoderLayer` blocks (small `nhead`/`dim_feedforward`,
+     this is the "lightweight self-attention over voltage history window" upgrade promised
+     in Section 5 and never built) → head on the final timestep producing SOH
+   - Forward accepts `(batch, seq_len, features)`, same shape contract as `BatteryLSTM`,
+     so it plugs into `Trainer`'s existing `input_mode="sequence"` path unchanged
+4. Write `src/battery_rul/training/tree_trainer.py`:
+   - `fit_lightgbm(train_df, val_dfs, feature_columns, mlflow_run_name) -> dict` — trains
+     `BatteryLightGBM` on flat feature/SOH rows, logs params + per-battery RMSE/MAE/R2 to
+     MLflow via `mlflow.lightgbm.log_model`, no epoch loop (boosting rounds aren't epochs)
+5. Update `scripts/train.py`:
+   - Add `"attention"` to `SEQUENCE_MODELS` and `build_model` (uses `Trainer` as-is)
+   - Add `"lightgbm"` as a model choice that bypasses `Trainer`/`DataLoader` entirely and
+     calls `fit_lightgbm` directly on the processed parquets
+   ```
+   python scripts/train.py --model attention --approach 2
+   python scripts/train.py --model lightgbm --approach 2
+   ```
+6. Update `tests/test_models.py` and add `tests/test_trees.py`:
+   - `BatteryAttention` forward pass `(32, 50, 9)` → `(32, 1)`, parameter count sanity
+   - `BatteryLightGBM` fit/predict round-trip on synthetic tabular data, save/load round-trip
+7. Update `scripts/precompute_predictions.py` and `src/battery_rul/evaluation/predictions.py`:
+   - Add RUN_CONFIGS entries for `attention_approach2` (torch path, same as lstm) and
+     `lightgbm_approach2` (new tree-model path — predict per-row at a stride, no windowing)
+8. Update `src/battery_rul/dashboard/app.py`:
+   - Add "Attention" and "LightGBM" to `APPROACH_MODELS[2]`, `MODEL_LABELS`, and the
+     comparison-table loop
+9. Run both new training configs; **record results in CHECKPOINTS.md**, including whether
+   either approach actually beats `paper_dnn`'s 0.66% — that comparison is the point of
+   this phase, not just adding more rows to a table
+10. Run `git add . && git commit -m "feat: phase 7 — lightgbm and attention models"`
+**Done when:** Both new models train without error, appear correctly in the dashboard's
+model dropdown and comparison table, and `pytest` passes including the new test files.
+---
+### PHASE 8 — EDA Notebooks
 **Goal:** Two clean, well-documented notebooks that tell the data story.
 Tasks:
 1. Write `notebooks/01_eda.ipynb`:
@@ -429,13 +486,14 @@ Tasks:
    - Load precomputed predictions from `data/processed/predictions/`
    - Plot: actual vs predicted voltage for each battery (Approach 2)
    - Plot: RMSE training curves for all models
-   - Table: final RMSE comparison (paper's Table reproduced + upgraded DNN row added)
+   - Table: final RMSE comparison (paper's Table reproduced + all our models, including
+     LightGBM and Attention from Phase 7)
    - Plot: overestimation vs underestimation distribution
-   - Markdown: interpret results, explain why upgraded DNN outperforms
-3. Run `git add . && git commit -m "feat: phase 7 — EDA and comparison notebooks"`
+   - Markdown: interpret results, explain which model wins and why
+3. Run `git add . && git commit -m "feat: phase 8 — EDA and comparison notebooks"`
 **Done when:** Both notebooks run top-to-bottom without errors.
 ---
-### PHASE 8 — README & Final Polish
+### PHASE 9 — README & Final Polish
 **Goal:** A README so good that a recruiter or engineer understands the project in 60 seconds.
 Tasks:
 1. Write `README.md` with this structure:
@@ -453,6 +511,8 @@ Tasks:
 | RNN + LSTM    | 1.61%                 |
 | Paper DNN     | 1.49%                 |
 | Upgraded DNN  | X.XX%  ← fill in     |
+| LightGBM      | X.XX%  ← fill in     |
+| Attention     | X.XX%  ← fill in     |
 ## Architecture
 [diagram or ASCII art of DNN pipeline]
 ## Quick Start
@@ -526,8 +586,13 @@ source .venv/bin/activate  # macOS/Linux
 # .venv\Scripts\activate    # Windows
 # Install all dependencies
 uv pip install -e ".[dev]"
+# macOS only: PyTorch and LightGBM each bundle/link a different libomp.dylib, which
+# crashes the process the first time LightGBM runs. brew install libomp, then patch
+# LightGBM's copy to load PyTorch's instead. Rerun after recreating .venv.
+brew install libomp
+bash scripts/fix_macos_libomp.sh
 # Verify install
-python -c "import torch; import dash; import fastapi; print('All good')"
+python -c "import torch; import dash; import fastapi; import lightgbm; print('All good')"
 ```
 ---
 ## 11. COMMON COMMANDS

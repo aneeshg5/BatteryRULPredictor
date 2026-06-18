@@ -1,5 +1,6 @@
 import torch
 
+from battery_rul.models.attention import BatteryAttention
 from battery_rul.models.dnn import PaperDNN, UpgradedDNN
 from battery_rul.models.lstm import BatteryLSTM
 
@@ -29,13 +30,27 @@ def test_lstm_forward_shape() -> None:
     assert out.shape == (32, 1)
 
 
+def test_attention_forward_shape() -> None:
+    model = BatteryAttention(input_dim=9)
+    out = model(torch.randn(32, 50, 9))
+    assert out.shape == (32, 1)
+
+
+def test_attention_forward_shorter_window() -> None:
+    model = BatteryAttention(input_dim=9, max_seq_len=50)
+    out = model(torch.randn(4, 10, 9))
+    assert out.shape == (4, 1)
+
+
 def test_parameter_counts_reasonable() -> None:
     paper_params = sum(p.numel() for p in PaperDNN(input_dim=5).parameters())
     upgraded_params = sum(
         p.numel() for p in UpgradedDNN(input_dim=9, layer_sizes=[32, 32]).parameters()
     )
     lstm_params = sum(p.numel() for p in BatteryLSTM(input_size=9).parameters())
+    attention_params = sum(p.numel() for p in BatteryAttention(input_dim=9).parameters())
 
     assert 0 < paper_params < 1_000
     assert 0 < upgraded_params < 100_000
     assert 0 < lstm_params < 1_000_000
+    assert 0 < attention_params < 100_000

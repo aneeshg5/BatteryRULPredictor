@@ -17,13 +17,18 @@ APPROACH_MODELS = {
         {"label": "Paper DNN", "value": "paper_dnn"},
         {"label": "Upgraded DNN", "value": "upgraded_dnn"},
         {"label": "LSTM", "value": "lstm"},
+        {"label": "Attention", "value": "attention"},
+        {"label": "LightGBM", "value": "lightgbm"},
     ],
 }
 MODEL_LABELS = {
     "paper_dnn": "Paper DNN (ours)",
     "upgraded_dnn": "Upgraded DNN (ours)",
     "lstm": "LSTM (ours)",
+    "attention": "Attention (ours)",
+    "lightgbm": "LightGBM (ours)",
 }
+MODELS_WITHOUT_TRAINING_CURVE = {"lightgbm"}
 GAUGE_STEPS = [
     {"range": [0, 80], "color": "#f8d7da"},
     {"range": [80, 90], "color": "#fff3cd"},
@@ -44,7 +49,7 @@ def load_history(model: str, approach: int) -> pd.DataFrame:
 def build_comparison_rows() -> list[tuple[str, float]]:
     """Avg RMSE (Approach 2) per model, ours computed from precomputed predictions."""
     rows = list(PAPER_BASELINE_RMSE.items())
-    for model in ("paper_dnn", "upgraded_dnn", "lstm"):
+    for model in ("paper_dnn", "upgraded_dnn", "lstm", "attention", "lightgbm"):
         rmses = []
         for battery in APPROACH_BATTERIES[2]:
             df = load_predictions(model, 2, battery)
@@ -223,14 +228,21 @@ def update_charts(
         empty = go.Figure()
         return empty, empty, empty, empty
     df = load_predictions(model, approach, battery)
-    history = load_history(model, approach)
     latest_soh_percent = float(df["soh_predicted"].iloc[-1] * 100)
     # SOH from the quantile-based formula can fall outside [0, 100] on noisy samples
     # (see CHECKPOINTS.md Phase 2); clamp only the gauge display, not the line charts.
     gauge_percent = min(max(latest_soh_percent, 0.0), 100.0)
+    if model in MODELS_WITHOUT_TRAINING_CURVE:
+        training_curve_figure = go.Figure().update_layout(
+            title=f"Training Curve — {model} (boosting rounds, not epochs; no per-round log)"
+        )
+    else:
+        training_curve_figure = make_training_curve_figure(
+            load_history(model, approach), model, approach
+        )
     return (
         make_voltage_figure(df, battery),
         make_gauge_figure(gauge_percent),
         make_soh_figure(df, battery),
-        make_training_curve_figure(history, model, approach),
+        training_curve_figure,
     )

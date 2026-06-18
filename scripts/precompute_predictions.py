@@ -9,13 +9,14 @@ python scripts/precompute_predictions.py
 
 import logging
 
+import mlflow.lightgbm
 import mlflow.pytorch
 import pandas as pd
 from mlflow.tracking import MlflowClient
 
 from battery_rul.config import PREDICTIONS_DIR, PROCESSED_DIR
 from battery_rul.data.preprocess import FEATURE_COLUMNS
-from battery_rul.evaluation.predictions import predict_battery
+from battery_rul.evaluation.predictions import predict_battery, predict_battery_lightgbm
 from battery_rul.training.trainer import get_default_device
 
 logger = logging.getLogger(__name__)
@@ -56,7 +57,23 @@ RUN_CONFIGS = [
         "input_mode": "sequence",
         "batteries": ["RW10", "RW11", "RW12"],
     },
+    {
+        "model": "attention",
+        "approach": 2,
+        "run_name": "attention_approach2",
+        "feature_columns": FEATURE_COLUMNS,
+        "input_mode": "sequence",
+        "batteries": ["RW10", "RW11", "RW12"],
+    },
 ]
+
+LIGHTGBM_RUN_CONFIG = {
+    "model": "lightgbm",
+    "approach": 2,
+    "run_name": "lightgbm_approach2",
+    "feature_columns": FEATURE_COLUMNS,
+    "batteries": ["RW10", "RW11", "RW12"],
+}
 
 
 def latest_run_id(client: MlflowClient, run_name: str) -> str:
@@ -114,6 +131,23 @@ def main() -> None:
             out_path = PREDICTIONS_DIR / out_name
             result.to_parquet(out_path, index=False)
             logger.info("Wrote %s (%d points, stride=%d)", out_path, len(result), stride)
+
+    cfg = LIGHTGBM_RUN_CONFIG
+    run_id = latest_run_id(client, cfg["run_name"])
+    logger.info("Loading %s from run %s", cfg["run_name"], run_id)
+    lgbm_model = mlflow.lightgbm.load_model(f"runs:/{run_id}/model")
+
+    for battery in cfg["batteries"]:
+        parquet_path = PROCESSED_DIR / f"{battery}.parquet"
+        n_rows = len(pd.read_parquet(parquet_path, columns=["soh"]))
+        stride = max(1, n_rows // TARGET_POINTS)
+        result = predict_battery_lightgbm(
+            lgbm_model, parquet_path, cfg["feature_columns"], stride=stride
+        )
+        out_name = f"{cfg['model']}_approach{cfg['approach']}_{battery}.parquet"
+        out_path = PREDICTIONS_DIR / out_name
+        result.to_parquet(out_path, index=False)
+        logger.info("Wrote %s (%d points, stride=%d)", out_path, len(result), stride)
 
 
 if __name__ == "__main__":
