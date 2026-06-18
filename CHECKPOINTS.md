@@ -166,3 +166,65 @@ dropout: 0.015, batch_size: 256}`, saved to `data/processed/best_params.json`.
 
 ### Next Phase
 Phase 5 — Interactive Dashboard
+
+## Phase 5 — Interactive Dashboard — COMPLETE
+
+**Date:** 2026-06-18
+
+### What Was Built
+- `src/battery_rul/data/preprocess.py` — `build_features()` now also keeps unscaled
+  `absolute_time_raw`/`voltage_raw` columns (added after engineered features, before the
+  MinMax scaler is fit/applied) so the dashboard can plot real seconds and volts instead
+  of [0, 1]-scaled values; preprocessing re-run to regenerate all 4 parquets
+- `src/battery_rul/evaluation/predictions.py` — `predict_battery()`, a windowed-inference
+  helper that runs a trained model over a battery's processed parquet at a given stride
+  and returns actual-vs-predicted SOH alongside the raw time/voltage columns
+- `scripts/precompute_predictions.py` — loads each of the 4 Phase-4 models directly from
+  MLflow (most recent run per run-name, via `MlflowClient.search_runs`) instead of
+  retraining, runs `predict_battery` per battery at a stride chosen to cap each trace at
+  ~5,000 points (browser-friendly), and pulls per-epoch `train_rmse`/`val_rmse` history
+  via `get_metric_history` for the training-curve chart. Writes everything to
+  `data/processed/predictions/*.parquet` (gitignored, same as other processed data)
+- `src/battery_rul/dashboard/app.py` — Dash app: approach toggle (1/2) drives which
+  models/batteries are selectable (Approach 1 only has `paper_dnn`/RW9; Approach 2 has
+  all 3 models x RW10-12); voltage-vs-time trace, SOH gauge (red/yellow/green at the
+  paper's 80/90% thresholds, clamped to [0, 100] for display), actual-vs-predicted SOH
+  overlay, RMSE-per-epoch training curve, and a model comparison table (published
+  baselines from `config.PAPER_BASELINE_RMSE` + our 3 models, best RMSE row bolded)
+- `scripts/serve.py` — launches the dashboard at `http://localhost:8050`
+- `src/battery_rul/dashboard/assets/style.css` — minimal sidebar/main-panel flex layout
+- `docs/images/dashboard_screenshot.png` + a Dashboard section in `README.md`
+
+### Results / Metrics
+- RMSE computed from the precomputed (subsampled) prediction files matches the
+  full-resolution Phase 4 numbers to within rounding (e.g. paper_dnn/RW12: 1.71% both
+  ways), confirming the ~5,000-point subsample is representative for the table and charts
+- `pytest` (15 tests), `ruff`, `black`, `mypy` all pass clean
+- Manually exercised in a browser via Playwright: approach toggle correctly re-scopes the
+  model/battery dropdowns, all 4 charts update on selection change, gauge color and
+  comparison-table highlighting both verified visually
+
+### Issues Encountered
+- **Voltage-vs-predicted overlay isn't possible as literally specified**: CLAUDE.md's
+  Phase 5 spec describes a "Voltage vs Time trace (actual + predicted overlay)," but every
+  model in this project predicts SOH, not voltage — there is no predicted-voltage series to
+  overlay. Adapted to the models' actual output: the voltage panel shows the real
+  (unscaled) actual trace only, and the actual-vs-predicted overlay was moved to the SOH
+  panel, which is the quantity the models actually predict.
+- **SOH gauge clamping was needed, as flagged back in Phase 2**: the quantile-based SOH
+  formula can produce values outside [0, 1] on noisy samples (confirmed live — RW12's
+  raw predicted SOH hit -6.6% at one selected point). The gauge display is clamped to
+  [0, 100]; the SOH-vs-time line chart is left unclamped so the chart still shows the true
+  predicted value.
+- Considered smoothing the gauge's "latest SOH" reading over the last 10 stride-subsampled
+  points to reduce noise, but those points are spread across a wide time range at this
+  stride (not actually "recent"), so averaging them would misrepresent the signal rather
+  than clean it up. Kept the gauge as the single latest predicted point (matches what the
+  model actually outputs at one instant), clamped for display only.
+- Reused the already-trained Phase 4 MLflow models instead of retraining for prediction
+  precomputation — `MlflowClient.search_runs` filtered by run name and sorted by start
+  time picks up the most recent (post-SOH-fix) run automatically, so this works correctly
+  even though each run name was trained 3 times across the Phase 4 bug-fix iterations.
+
+### Next Phase
+Phase 6 — FastAPI Inference Endpoint

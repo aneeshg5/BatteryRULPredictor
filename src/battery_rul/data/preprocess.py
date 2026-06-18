@@ -110,7 +110,11 @@ def build_features(raw_path: Path) -> pd.DataFrame:
     """Load a raw .mat file and produce the full feature + target DataFrame."""
     df = load_raw_mat(raw_path)
     df["soh"] = compute_soh(df["voltage"])
-    return add_engineered_features(df)
+    df = add_engineered_features(df)
+    # Kept unscaled for dashboard plotting; FEATURE_COLUMNS scaling below doesn't touch these.
+    df["absolute_time_raw"] = df["absolute_time"]
+    df["voltage_raw"] = df["voltage"]
+    return df
 
 
 def run_preprocessing(

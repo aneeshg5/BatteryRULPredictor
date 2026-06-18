@@ -20,3 +20,10 @@ WINDOW_SIZE = 50
 
 SOH_THRESHOLD = 0.80
 SEED = 42
+
+# Published SRA 2023 baselines, Avg RMSE (Approach 2) — for dashboard/README comparison only.
+PAPER_BASELINE_RMSE = {
+    "BLS-RVM": 0.0155,
+    "RNN + LSTM": 0.0161,
+    "Paper DNN (original)": 0.0149,
+}
