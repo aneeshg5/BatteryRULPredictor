@@ -228,3 +228,55 @@ Phase 5 — Interactive Dashboard
 
 ### Next Phase
 Phase 6 — FastAPI Inference Endpoint
+
+## Phase 6 — FastAPI Inference Endpoint — COMPLETE
+
+**Date:** 2026-06-18
+
+### What Was Built
+- `scripts/export_model.py` — exports the `upgraded_dnn_approach2` model from MLflow
+  (most recent run by name) to a standalone `torch.save` artifact
+  (`data/processed/model_upgraded_dnn_v1.pt`), decoupling the inference API from the
+  MLflow tracking store at request time. Also computes mean `absolute_time`/`cycle_count`
+  from RW9 and writes them to `data/processed/inference_defaults.json` for use as
+  inference-time defaults for the two features a single live reading can't supply
+- `src/battery_rul/data/preprocess.py` — added a `cycle_count_raw` preserved column
+  (mirrors `absolute_time_raw`/`voltage_raw` from Phase 5) so `export_model.py` can read
+  genuinely-unscaled cycle counts; preprocessing re-run to regenerate all 4 parquets
+- `src/battery_rul/inference/predictor.py` — `Predictor` class: loads the exported model +
+  `scaler.pkl` + inference defaults, reconstructs all 9 model features from a live
+  `voltage_history`/`current`/`temperature`/`step_type` reading (rolling mean/std and dv/dt
+  computed from the history list, `absolute_time`/`cycle_count` filled from defaults),
+  scales, runs inference, and returns `{soh, rul_estimate, confidence}`. Confidence is
+  "high" when the requested voltage falls inside the training data's observed min/max
+  range, else "low"
+- `src/battery_rul/inference/api.py` — FastAPI app with `GET /health`, `GET /model-info`,
+  `POST /predict`; a `lifespan` handler loads the `Predictor` singleton at startup and
+  degrades gracefully (logs a warning, leaves it unset) if artifacts are missing rather
+  than crashing; `get_predictor` dependency raises 503 when unset. Pydantic request model
+  uses `Literal["charge","discharge","rest"]` and `Field(min_length=2)` for automatic 422s
+- `tests/test_api.py` — 5 tests using `app.dependency_overrides` to swap in an in-memory
+  fake predictor, so the suite never touches the real model/scaler artifacts (`data/` is
+  gitignored and CI does a fresh checkout)
+- Added `httpx` to dev dependencies (required by FastAPI's `TestClient`)
+
+### Results / Metrics
+- `pytest` (20 tests total), `ruff`, `black`, `mypy` all pass clean
+- Manual smoke test against the real exported model via
+  `uvicorn battery_rul.inference.api:app --port 8000`:
+  `/health` → `{"status":"ok","model_loaded":true}`,
+  `/model-info` → architecture/rmse/training_battery/test_batteries all correct,
+  `/predict` on a sample discharge reading → `soh=0.756`, `rul_estimate="Replace soon"`,
+  `confidence="high"`
+
+### Issues Encountered
+- CLAUDE.md's spec only defines RUL buckets for SOH < 85% ("Replace soon") and > 90%
+  ("Healthy"), leaving 85-90% undefined. Filled the gap with a "Monitor" bucket — simplest
+  reasonable choice for the unspecified middle range.
+- The model only ever sees the last single timestep's 9 features at inference (`Trainer`'s
+  flat input mode slices the final row of each window), not a full 50-step window — this
+  simplified `Predictor.predict` to a single feature-row reconstruction instead of
+  simulating an entire window.
+
+### Next Phase
+Phase 7 — EDA Notebooks

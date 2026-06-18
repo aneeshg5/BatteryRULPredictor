@@ -111,9 +111,11 @@ def build_features(raw_path: Path) -> pd.DataFrame:
     df = load_raw_mat(raw_path)
     df["soh"] = compute_soh(df["voltage"])
     df = add_engineered_features(df)
-    # Kept unscaled for dashboard plotting; FEATURE_COLUMNS scaling below doesn't touch these.
+    # Kept unscaled for dashboard plotting and inference defaults; FEATURE_COLUMNS
+    # scaling below doesn't touch these.
     df["absolute_time_raw"] = df["absolute_time"]
     df["voltage_raw"] = df["voltage"]
+    df["cycle_count_raw"] = df["cycle_count"]
     return df
 
 
