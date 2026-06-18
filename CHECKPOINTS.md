@@ -399,3 +399,29 @@ Phase 8 — EDA Notebooks
 
 ### Next Phase
 Phase 9 — README & Final Polish
+
+## Phase 9 — README & Final Polish — COMPLETE
+
+**Date:** 2026-06-18
+
+### What Was Built
+- `README.md` rewritten in full: why-it-matters framing, results table, architecture
+  diagram, quick start, dashboard screenshot, project structure, paper reference
+- `docs/architecture.md` — system design notes covering the data pipeline, model
+  architecture decisions (including why Phase 7 added LightGBM/Attention), training
+  methodology, and API design rationale
+
+### Results / Metrics
+- README results table deviates from CLAUDE.md's original template (which only listed
+  3 published baselines + 3 blank "ours" rows) — used the full 8-row sorted comparison
+  from `02_model_comparison.ipynb` instead, since it surfaces the actual headline result
+  (paper_dnn replica at 0.66% beats every model and baseline, including its own
+  "upgraded" successor) rather than hiding it
+- `ruff`, `black --check`, `mypy`, `pytest` (25 tests) all pass clean
+
+### Issues Encountered
+- None blocking; the only deviation is the results-table format noted above, logged per
+  CLAUDE.md Section 12 rule 5 (simplest reasonable choice, logged, continue)
+
+### Next Phase
+None — v1.0.0 portfolio release.
