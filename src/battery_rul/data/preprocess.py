@@ -81,8 +81,14 @@ def load_raw_mat(path: Path) -> pd.DataFrame:
 
 
 def compute_soh(voltage: pd.Series, threshold: float = SOH_THRESHOLD) -> pd.Series:
-    """Compute State of Health from voltage: SOH = (Vi - Vf) / (V0 - Vf), Vf = threshold * V0."""
-    v0 = voltage.iloc[0]
+    """Compute State of Health from voltage: SOH = (Vi - Vf) / (V0 - Vf), Vf = threshold * V0.
+
+    V0 is the 99.9th percentile voltage (proxy for a fresh full charge) rather than
+    the first sample or raw max, since a random-walk trace can start at an arbitrary
+    point in the charge/discharge cycle and the raw max is sensitive to single-sample
+    sensor noise spikes.
+    """
+    v0 = voltage.quantile(0.999)
     vf = threshold * v0
     return (voltage - vf) / (v0 - vf)
 
