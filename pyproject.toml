@@ -32,6 +32,8 @@ dev = [
     "black>=24.1",
     "mypy>=1.8",
     "httpx>=0.27",
+    "jupyter>=1.0",
+    "nbconvert>=7.16",
 ]
 
 [tool.hatch.build.targets.wheel]

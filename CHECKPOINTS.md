@@ -357,3 +357,45 @@ features — the bottleneck is the data/feature relationship itself, not the net
 
 ### Next Phase
 Phase 8 — EDA Notebooks
+
+## Phase 8 — EDA Notebooks — COMPLETE
+
+**Date:** 2026-06-18
+
+### What Was Built
+- `notebooks/01_eda.ipynb` — loads all 4 processed parquets (stride-subsampled),
+  voltage-vs-time and temperature-vs-time per battery, current distribution by
+  charge/discharge/rest, SOH degradation curves, and a feature correlation heatmap on
+  RW9 (reproducing the paper's Fig. 7), each followed by a markdown finding
+- `notebooks/02_model_comparison.ipynb` — loads precomputed predictions for all 5
+  Approach-2 models, actual-vs-predicted SOH overlay, per-epoch training curves for the
+  4 torch models, a final RMSE comparison table (published baselines + all 5 of our
+  models), and an overestimation-vs-underestimation bar chart using `evaluation/metrics.py`
+- Added `jupyter`/`nbconvert` to dev dependencies (needed to author/execute notebooks;
+  charts use `plotly`, already a runtime dependency, instead of adding matplotlib/seaborn)
+
+### Results / Metrics
+- Both notebooks executed top-to-bottom via `jupyter nbconvert --execute` with zero
+  error cells
+- `02_model_comparison.ipynb`'s computed comparison table matches Phase 7's training-run
+  numbers to within rounding: paper_dnn 0.66%, lightgbm 0.68%, attention 0.80%,
+  lstm 0.81% (vs. 0.83% reported during training — same small variance already noted in
+  Phase 5 between full-resolution and stride-subsampled prediction files), upgraded_dnn
+  1.26%
+- `pytest` (25 tests), `ruff`, `black`, `mypy` all pass clean
+
+### Issues Encountered
+- CLAUDE.md's Phase 8 spec says "load all 4 battery raw CSVs," but the raw data is
+  `.mat` (see Phase 2) and the processed parquets already carry preserved unscaled
+  `voltage_raw`/`absolute_time_raw` columns alongside the engineered features — loaded
+  from `data/processed/*.parquet` instead, consistent with the dashboard's data source
+- `current` and `temperature` have no preserved unscaled column (only voltage and
+  absolute_time do, added in Phase 5 for the dashboard); the current-distribution and
+  temperature plots use the min-max scaled [0, 1] values with a markdown note explaining
+  the scale, rather than adding new raw-preserving columns to `preprocess.py` for a plot
+- Plotly's `application/vnd.plotly.v1+json` output mimetype renders natively in GitHub's
+  notebook viewer, so the interactive charts display correctly without requiring
+  matplotlib/static images or a kaleido dependency
+
+### Next Phase
+Phase 9 — README & Final Polish
