@@ -47,8 +47,8 @@ capacity. See `CHECKPOINTS.md` Phase 7 for the full investigation.
 ## Quick Start
 
 ```bash
-git clone https://github.com/aneeshg5/battery-rul-predictor.git
-cd battery-rul-predictor
+git clone https://github.com/aneeshg5/BatteryRULPredictor.git
+cd BatteryRULPredictor
 uv venv .venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
 brew install libomp && bash scripts/fix_macos_libomp.sh  # macOS only
