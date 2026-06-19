@@ -60,7 +60,7 @@ python scripts/serve.py                                  # http://localhost:8050
 
 ## Dashboard
 
-![Dashboard screenshot](docs/images/dashboard_screenshot.png)
+![Dashboard demo](docs/images/dashboard_demo.gif)
 
 Select a battery, model, and approach to see live voltage traces, an SOH gauge,
 SOH-over-time, training curves, and a full model comparison table.
