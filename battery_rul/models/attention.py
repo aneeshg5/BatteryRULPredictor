@@ -1,6 +1,3 @@
-"""Self-attention sequence model: learns temporal structure directly from raw windows
-instead of relying on hand-engineered rolling-window features (the LSTM's alternative)."""
-
 import torch
 from torch import nn
 
@@ -15,7 +12,6 @@ from battery_rul.config import (
 
 
 class BatteryAttention(nn.Module):
-    """Transformer encoder over a feature-history window, predicting SOH from the final step."""
 
     def __init__(
         self,

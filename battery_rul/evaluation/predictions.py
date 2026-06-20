@@ -1,5 +1,3 @@
-"""Run a trained model over a battery's processed parquet to produce actual-vs-predicted SOH."""
-
 from pathlib import Path
 
 import numpy as np
@@ -21,10 +19,6 @@ def predict_battery(
     stride: int = 1,
     batch_size: int = 512,
 ) -> pd.DataFrame:
-    """Slide a window over a battery's series and predict SOH at each target index.
-
-    Returns columns: absolute_time_raw, voltage_raw, soh_actual, soh_predicted.
-    """
     df = pd.read_parquet(parquet_path)
     features = df[feature_columns].to_numpy(dtype=np.float32)
     n_windows = len(df) - window_size + 1
@@ -56,10 +50,6 @@ def predict_battery_lightgbm(
     feature_columns: list[str],
     stride: int = 1,
 ) -> pd.DataFrame:
-    """Predict per-row SOH for a battery with a tree model — no windowing needed.
-
-    Returns columns: absolute_time_raw, voltage_raw, soh_actual, soh_predicted.
-    """
     df = pd.read_parquet(parquet_path)
     sampled = df.iloc[::stride]
     soh_predicted = model.predict(sampled[feature_columns].to_numpy(dtype=np.float32))

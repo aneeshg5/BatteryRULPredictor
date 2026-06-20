@@ -1,5 +1,3 @@
-"""PyTorch Dataset and DataLoader construction for windowed battery feature sequences."""
-
 from pathlib import Path
 
 import numpy as np
@@ -18,7 +16,6 @@ from battery_rul.data.preprocess import FEATURE_COLUMNS
 
 
 class BatteryDataset(Dataset):
-    """Windowed (feature history, SOH target) pairs from one battery's processed parquet."""
 
     def __init__(
         self,
@@ -53,7 +50,6 @@ def get_dataloaders(
     feature_columns: list[str] | None = None,
     processed_dir: Path = PROCESSED_DIR,
 ) -> tuple[DataLoader, dict[str, DataLoader]]:
-    """Build the training DataLoader for train_battery and one per test battery."""
     test_batteries = test_batteries if test_batteries is not None else TEST_BATTERIES
 
     train_ds = BatteryDataset(

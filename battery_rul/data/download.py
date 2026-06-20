@@ -1,5 +1,3 @@
-"""Download and extract the NASA Randomized Battery Usage 1: Random Walk dataset."""
-
 import hashlib
 import json
 import logging
@@ -28,7 +26,6 @@ def _sha256(path: Path) -> str:
 
 
 def download_dataset(raw_dir: Path = RAW_DIR, force: bool = False) -> list[Path]:
-    """Download RW9-RW12 .mat files into raw_dir, skipping re-download if already present."""
     raw_dir.mkdir(parents=True, exist_ok=True)
     targets = [raw_dir / f"{name}.mat" for name in BATTERIES]
     checksum_path = raw_dir / "checksums.json"

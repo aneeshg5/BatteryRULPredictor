@@ -1,13 +1,3 @@
-"""CLI: train a model under Approach 1 (intra-battery) or Approach 2 (cross-battery).
-
-python scripts/train.py --model paper_dnn --approach 1
-python scripts/train.py --model paper_dnn --approach 2
-python scripts/train.py --model upgraded_dnn --approach 2
-python scripts/train.py --model lstm --approach 2
-python scripts/train.py --model attention --approach 2
-python scripts/train.py --model lightgbm --approach 2
-"""
-
 import argparse
 import logging
 
@@ -56,7 +46,6 @@ def build_model(name: str, input_dim: int) -> nn.Module:
 def build_eval_sets(
     model_name: str, feature_columns: list[str], approach: int, stride: int = 1
 ) -> tuple[DataLoader, dict[str, DataLoader]]:
-    """Build the training DataLoader and a dict of per-battery evaluation DataLoaders."""
     if approach == 1:
         dataset = BatteryDataset(
             PROCESSED_DIR / f"{TRAIN_BATTERY}.parquet",
@@ -98,7 +87,6 @@ def build_eval_sets(
 def build_lightgbm_data(
     approach: int, feature_columns: list[str]
 ) -> tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
-    """Build flat train/eval DataFrames for LightGBM — no windowing, features are per-row."""
     columns = [*feature_columns, "soh"]
     if approach == 1:
         df = pd.read_parquet(PROCESSED_DIR / f"{TRAIN_BATTERY}.parquet", columns=columns)

@@ -1,12 +1,3 @@
-"""Precompute actual-vs-predicted SOH and training curves for the dashboard.
-
-Loads each already-trained model from MLflow (most recent run per name) instead of
-retraining, runs inference over a stride-subsampled trace of each battery, and writes
-parquet files to data/processed/predictions/ so the dashboard never runs live inference.
-
-python scripts/precompute_predictions.py
-"""
-
 import logging
 
 import mlflow.lightgbm
@@ -77,7 +68,6 @@ LIGHTGBM_RUN_CONFIG = {
 
 
 def latest_run_id(client: MlflowClient, run_name: str) -> str:
-    """Find the most recent MLflow run with the given run name (re-runs reuse names)."""
     runs = client.search_runs(
         experiment_ids=["0"],
         filter_string=f"tags.mlflow.runName = '{run_name}'",
@@ -90,7 +80,6 @@ def latest_run_id(client: MlflowClient, run_name: str) -> str:
 
 
 def save_history(client: MlflowClient, run_id: str, run_name: str) -> None:
-    """Save per-epoch train/val RMSE history for the training-curve chart."""
     train_history = client.get_metric_history(run_id, "train_rmse")
     val_history = client.get_metric_history(run_id, "val_rmse")
     df = pd.DataFrame(

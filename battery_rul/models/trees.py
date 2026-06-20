@@ -1,6 +1,3 @@
-"""Gradient-boosted tree baseline. Not an nn.Module — doesn't fit the PyTorch training loop,
-operates directly on per-row tabular features instead of windowed sequences."""
-
 from pathlib import Path
 
 import joblib
@@ -16,7 +13,6 @@ from battery_rul.config import (
 
 
 class BatteryLightGBM:
-    """Wraps LGBMRegressor with a fit/predict/save/load contract."""
 
     def __init__(
         self,

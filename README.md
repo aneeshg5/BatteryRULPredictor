@@ -1,39 +1,41 @@
 # Battery Remaining Useful Life Predictor
 
-> Predicts Remaining Useful Life and State of Health for Li-ion batteries using deep learning.
+## Overview
 
-![Python 3.11](https://img.shields.io/badge/python-3.11%2B-blue)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.2-EE4C2C)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688)
-![Plotly Dash](https://img.shields.io/badge/Plotly%20Dash-2.15-3F4F75)
-![License: MIT](https://img.shields.io/badge/license-MIT-green)
+Remaining Useful Life (RUL) is how much usable life a battery has left before it needs
+replacing. Accurate State of Health (SOH) estimates are critical wherever cells can't be
+swapped out casually, like battery management systems, fleet telemetry, satellite and
+launch vehicle power systems, and EV powertrains.
 
-## Why This Matters
-
-Remaining Useful Life (RUL) is how much usable life a battery has left before it
-needs replacing. Knowing it matters wherever cells can't be swapped out casually,
-like battery management system, fleet telemetry, satellite and launch vehicle
-power systems, and EV powertrains. All of which depend on accurate health estimates.
-
-This project reimplements my SRA 2023 paper's approach to predicting battery
-State of Health (SOH), then tests whether more sophisticated models actually improve
-on it. See Results below.
+This project implements an end-to-end deep learning pipeline for SOH/RUL prediction. It
+reimplements my SRA 2023 research paper's approach and benchmarks it against more
+sophisticated architectures, including LSTM, Transformer-based attention, and LightGBM,
+on real NASA battery degradation data. The pipeline covers data preprocessing and feature
+engineering, model training and hyperparameter tuning with MLflow and Optuna, a FastAPI
+inference service, and an interactive Plotly Dash dashboard. See Results below.
 
 ## Results
 
 Cross-battery generalization (Approach 2: train on RW9, predict RW10/RW11/RW12).
 Average RMSE across the three held-out batteries:
 
-| Model                 | Avg RMSE (Approach 2) |
-|------------------------|------------------------|
-| **Paper DNN (ours)**   | **0.66%**              |
-| LightGBM (ours)        | 0.68%                  |
-| Attention (ours)       | 0.80%                  |
-| LSTM (ours)            | 0.81%                  |
-| Upgraded DNN (ours)    | 1.26%                  |
-| Paper DNN (original)   | 1.49%                  |
-| BLS-RVM (original)     | 1.55%                  |
-| RNN + LSTM (original)  | 1.61%                  |
+**Trained and evaluated in this project**
+
+| Model            | Avg RMSE (Approach 2) |
+|-------------------|------------------------|
+| **Paper DNN**     | **0.66%**              |
+| LightGBM          | 0.68%                  |
+| Attention         | 0.80%                  |
+| LSTM              | 0.81%                  |
+| Upgraded DNN      | 1.26%                  |
+
+**Published baseline (SRA 2023 paper)**
+
+| Model            | Avg RMSE (Approach 2) |
+|-------------------|------------------------|
+| Paper DNN         | 1.49%                  |
+| BLS-RVM           | 1.55%                  |
+| RNN + LSTM        | 1.61%                  |
 
 All six models beat every published baseline. The interesting result is within
 our own models where the exact paper-replica DNN, with 2 hidden layers and no batch norm,
@@ -43,11 +45,11 @@ close second. This suggests the engineered features already carry the temporal
 signal that matters, and the bottleneck is the data/feature relationship, not model
 capacity.
 
-## Quick Start
+## Getting Started
 
 ```bash
-git clone https://github.com/aneeshg5/BatteryRULPredictor.git
-cd BatteryRULPredictor
+git clone https://github.com/aneeshg5/Battery-RUL-Predictor.git
+cd Battery-RUL-Predictor
 uv venv .venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
 brew install libomp && bash scripts/fix_macos_libomp.sh  # macOS only

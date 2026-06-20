@@ -1,5 +1,3 @@
-"""Optuna hyperparameter search for UpgradedDNN over Approach 2 (train on RW9)."""
-
 import logging
 
 import optuna
@@ -23,7 +21,6 @@ def objective(
     val_subset: Subset,
     device: torch.device,
 ) -> float:
-    """One Optuna trial: sample hyperparameters, train UpgradedDNN, return best val RMSE."""
     n_layers = trial.suggest_int("n_layers", 2, 5)
     layer_sizes = [trial.suggest_int(f"n_units_l{i}", 8, 128) for i in range(n_layers)]
     lr = trial.suggest_float("lr", 1e-4, 1e-2, log=True)
@@ -51,7 +48,6 @@ def objective(
 def run_study(
     train_dataset: BatteryDataset, n_trials: int, device: torch.device | None = None
 ) -> optuna.Study:
-    """Split train_dataset 80/20 and run an Optuna study minimizing val RMSE."""
     device = device if device is not None else get_default_device()
     n_train = int(0.8 * len(train_dataset))
     train_subset = Subset(train_dataset, range(n_train))

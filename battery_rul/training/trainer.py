@@ -1,5 +1,3 @@
-"""Generic training loop with MLflow logging and early stopping."""
-
 import copy
 import logging
 
@@ -16,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 def get_default_device() -> torch.device:
-    """Pick the fastest available device: CUDA, then Apple MPS, then CPU."""
     if torch.cuda.is_available():
         return torch.device("cuda")
     if torch.backends.mps.is_available():
@@ -25,17 +22,10 @@ def get_default_device() -> torch.device:
 
 
 def rmse_loss(prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-    """RMSE loss, matching the paper's loss function."""
     return torch.sqrt(nn.functional.mse_loss(prediction, target))
 
 
 class Trainer:
-    """Trains a model with RMSE loss, MLflow logging, and early stopping.
-
-    input_mode "flat" feeds the final timestep of each window to the model (for
-    instantaneous-prediction models like the DNNs); "sequence" feeds the full window
-    (for the LSTM).
-    """
 
     def __init__(
         self,
@@ -58,7 +48,6 @@ class Trainer:
         return prediction.squeeze(-1)
 
     def train_epoch(self, dataloader: DataLoader) -> float:
-        """Run one training epoch and return the example-weighted RMSE."""
         self.model.train()
         total_loss = 0.0
         total_examples = 0
@@ -74,7 +63,6 @@ class Trainer:
         return total_loss / total_examples
 
     def eval_epoch(self, dataloader: DataLoader) -> dict[str, float]:
-        """Evaluate on a dataloader and return {rmse, mae, r2}."""
         self.model.eval()
         all_preds = []
         all_targets = []
@@ -99,7 +87,6 @@ class Trainer:
         epochs: int,
         early_stopping_patience: int = 5,
     ) -> dict[str, float]:
-        """Train for up to `epochs`, restoring the best validation-RMSE weights on exit."""
         best_val_rmse = float("inf")
         best_state = copy.deepcopy(self.model.state_dict())
         epochs_without_improvement = 0

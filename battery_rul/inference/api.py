@@ -1,8 +1,3 @@
-"""FastAPI REST endpoint for real-time SOH inference.
-
-uvicorn battery_rul.inference.api:app --reload --port 8000
-"""
-
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager

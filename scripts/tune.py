@@ -1,8 +1,3 @@
-"""CLI: run Optuna hyperparameter search for UpgradedDNN.
-
-python scripts/tune.py --n-trials 50
-"""
-
 import argparse
 import json
 import logging

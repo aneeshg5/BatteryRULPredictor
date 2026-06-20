@@ -1,12 +1,8 @@
-"""LSTM baseline mirroring the paper's RNN+LSTM comparison model."""
-
 import torch
 from torch import nn
 
 
 class BatteryLSTM(nn.Module):
-    """Multi-layer LSTM over a feature-history window, predicting SOH from the final step."""
-
     def __init__(
         self,
         input_size: int,

@@ -1,5 +1,3 @@
-"""Training path for tree models, which don't fit the epoch-based PyTorch Trainer loop."""
-
 import logging
 
 import mlflow
@@ -18,10 +16,6 @@ def fit_lightgbm(
     feature_columns: list[str],
     mlflow_run_name: str,
 ) -> dict[str, float]:
-    """Fit a BatteryLightGBM on train_df and log params + per-battery RMSE/MAE/R2 to MLflow.
-
-    Returns a dict of battery name -> RMSE.
-    """
     x_train = train_df[feature_columns].to_numpy()
     y_train = train_df["soh"].to_numpy()
 

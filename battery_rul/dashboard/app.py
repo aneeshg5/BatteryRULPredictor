@@ -1,9 +1,3 @@
-"""Plotly Dash dashboard: voltage trace, SOH gauge, SOH overlay, training curve, model table.
-
-All charts read from precomputed parquet files in data/processed/predictions/ — no model
-inference happens at request time (see scripts/precompute_predictions.py).
-"""
-
 import pandas as pd
 import plotly.graph_objects as go
 from dash import Dash, Input, Output, dcc, html
@@ -47,7 +41,6 @@ def load_history(model: str, approach: int) -> pd.DataFrame:
 
 
 def build_comparison_rows() -> list[tuple[str, float]]:
-    """Avg RMSE (Approach 2) per model, ours computed from precomputed predictions."""
     rows = list(PAPER_BASELINE_RMSE.items())
     for model in ("paper_dnn", "upgraded_dnn", "lstm", "attention", "lightgbm"):
         rmses = []
@@ -229,8 +222,6 @@ def update_charts(
         return empty, empty, empty, empty
     df = load_predictions(model, approach, battery)
     latest_soh_percent = float(df["soh_predicted"].iloc[-1] * 100)
-    # SOH from the quantile-based formula can fall outside [0, 100] on noisy samples;
-    # clamp only the gauge display, not the line charts.
     gauge_percent = min(max(latest_soh_percent, 0.0), 100.0)
     if model in MODELS_WITHOUT_TRAINING_CURVE:
         training_curve_figure = go.Figure().update_layout(

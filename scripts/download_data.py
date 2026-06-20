@@ -1,5 +1,3 @@
-"""CLI: download the NASA Randomized Battery Usage 1: Random Walk dataset."""
-
 import logging
 
 from battery_rul.data.download import download_dataset

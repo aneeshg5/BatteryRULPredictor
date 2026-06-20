@@ -1,5 +1,3 @@
-"""Load a trained model + scaler and run single-reading SOH inference."""
-
 import json
 import pickle
 from pathlib import Path
@@ -21,7 +19,6 @@ STEP_TYPE_CODE = {"charge": 1, "discharge": -1, "rest": 0}
 
 
 def rul_estimate(soh: float) -> str:
-    """RUL bucket from SOH: paper's 80% threshold informs the "replace soon" cutoff."""
     if soh < RUL_REPLACE_SOH:
         return "Replace soon"
     if soh > RUL_HEALTHY_SOH:
@@ -30,7 +27,6 @@ def rul_estimate(soh: float) -> str:
 
 
 class Predictor:
-    """Loads a standalone model + scaler artifact and predicts SOH from live readings."""
 
     def __init__(
         self, model_path: Path, scaler_path: Path, device: torch.device | None = None
@@ -53,11 +49,6 @@ class Predictor:
     def predict(
         self, voltage_history: list[float], current: float, temperature: float, step_type: str
     ) -> dict[str, float | str]:
-        """Predict SOH from the most recent voltage readings plus instantaneous current/temp.
-
-        voltage_history must have at least 2 readings (needed for the dv/dt feature);
-        the rolling mean/std features use up to the last ROLLING_WINDOW readings.
-        """
         voltages = np.asarray(voltage_history, dtype=np.float64)
         recent = voltages[-ROLLING_WINDOW:]
         voltage = float(voltages[-1])

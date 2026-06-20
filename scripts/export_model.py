@@ -1,9 +1,3 @@
-"""Export the upgraded_dnn / approach-2 model from MLflow into a standalone artifact
-the inference API can load without depending on the MLflow tracking store at request time.
-
-python scripts/export_model.py
-"""
-
 import json
 import logging
 
@@ -25,7 +19,6 @@ RUN_NAME = "upgraded_dnn_approach2"
 
 
 def latest_run_id(client: MlflowClient, run_name: str) -> str:
-    """Find the most recent MLflow run with the given run name (re-runs reuse names)."""
     runs = client.search_runs(
         experiment_ids=["0"],
         filter_string=f"tags.mlflow.runName = '{run_name}'",

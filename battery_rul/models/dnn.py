@@ -1,5 +1,3 @@
-"""DNN architectures: the paper's exact baseline and a configurable upgraded version."""
-
 import torch
 from torch import nn
 
@@ -7,7 +5,6 @@ from battery_rul.config import HIDDEN_LAYERS
 
 
 class PaperDNN(nn.Module):
-    """Exact replica of the paper's 2-hidden-layer DNN: ReLU then Sigmoid, linear output."""
 
     def __init__(self, input_dim: int) -> None:
         super().__init__()
@@ -25,8 +22,6 @@ class PaperDNN(nn.Module):
 
 
 class UpgradedDNN(nn.Module):
-    """Configurable DNN: Linear -> BatchNorm1d -> activation -> Dropout per hidden layer,
-    with a residual add whenever a block's input and output dims match."""
 
     def __init__(
         self,
